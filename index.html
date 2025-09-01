@@ -1,0 +1,503 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>EchoVerse - Explore Your Alternative Realities</title>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.5/d3.min.js"></script>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a2e 50%, #16213e 100%);
+            color: #ffffff;
+            overflow-x: hidden;
+            min-height: 100vh;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        
+        .header {
+            text-align: center;
+            margin-bottom: 40px;
+            position: relative;
+        }
+        
+        .header::before {
+            content: '';
+            position: absolute;
+            top: -20px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 100px;
+            height: 2px;
+            background: linear-gradient(90deg, transparent, #00d4ff, transparent);
+            animation: pulse 2s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 0.3; }
+            50% { opacity: 1; }
+        }
+        
+        h1 {
+            font-size: 3rem;
+            background: linear-gradient(45deg, #00d4ff, #ff006e, #00d4ff);
+            background-clip: text;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-size: 200% 200%;
+            animation: gradient-shift 3s ease-in-out infinite;
+            margin-bottom: 10px;
+        }
+        
+        @keyframes gradient-shift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+        
+        .subtitle {
+            font-size: 1.2rem;
+            opacity: 0.8;
+            margin-bottom: 30px;
+        }
+        
+        .input-section {
+            background: rgba(255, 255, 255, 0.05);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 40px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+        }
+        
+        .input-group {
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+            justify-content: center;
+        }
+        
+        input {
+            background: rgba(255, 255, 255, 0.1);
+            border: 1px solid rgba(0, 212, 255, 0.3);
+            border-radius: 25px;
+            padding: 12px 20px;
+            color: white;
+            font-size: 1rem;
+            min-width: 300px;
+            transition: all 0.3s ease;
+        }
+        
+        input:focus {
+            outline: none;
+            border-color: #00d4ff;
+            box-shadow: 0 0 20px rgba(0, 212, 255, 0.3);
+            background: rgba(255, 255, 255, 0.15);
+        }
+        
+        input::placeholder {
+            color: rgba(255, 255, 255, 0.6);
+        }
+        
+        button {
+            background: linear-gradient(45deg, #ff006e, #00d4ff);
+            border: none;
+            border-radius: 25px;
+            padding: 12px 30px;
+            color: white;
+            font-size: 1rem;
+            font-weight: bold;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 25px rgba(255, 0, 110, 0.3);
+        }
+        
+        button::before {
+            content: '';
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+            transition: left 0.5s;
+        }
+        
+        button:hover::before {
+            left: 100%;
+        }
+        
+        .visualization {
+            background: rgba(255, 255, 255, 0.02);
+            border: 1px solid rgba(255, 255, 255, 0.05);
+            border-radius: 20px;
+            min-height: 600px;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .node {
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+        
+        .node circle {
+            fill: #00d4ff;
+            stroke: rgba(255, 255, 255, 0.3);
+            stroke-width: 2;
+            filter: drop-shadow(0 0 10px rgba(0, 212, 255, 0.5));
+        }
+        
+        .node:hover circle {
+            fill: #ff006e;
+            r: 8;
+            filter: drop-shadow(0 0 15px rgba(255, 0, 110, 0.8));
+        }
+        
+        .node text {
+            font-size: 12px;
+            fill: white;
+            text-anchor: middle;
+            pointer-events: none;
+            text-shadow: 1px 1px 2px rgba(0, 0, 0, 0.8);
+        }
+        
+        .link {
+            fill: none;
+            stroke: rgba(0, 212, 255, 0.6);
+            stroke-width: 2;
+            filter: drop-shadow(0 0 5px rgba(0, 212, 255, 0.3));
+        }
+        
+        .reality-details {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            background: rgba(0, 0, 0, 0.8);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.2);
+            border-radius: 15px;
+            padding: 20px;
+            max-width: 300px;
+            opacity: 0;
+            transform: translateX(20px);
+            transition: all 0.3s ease;
+        }
+        
+        .reality-details.show {
+            opacity: 1;
+            transform: translateX(0);
+        }
+        
+        .particle {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            background: radial-gradient(circle, #00d4ff 0%, transparent 70%);
+            border-radius: 50%;
+            pointer-events: none;
+            animation: float 6s ease-in-out infinite;
+        }
+        
+        @keyframes float {
+            0%, 100% { transform: translateY(0) rotate(0deg); opacity: 0; }
+            10%, 90% { opacity: 1; }
+            50% { transform: translateY(-100px) rotate(180deg); }
+        }
+        
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 30px;
+            padding: 20px;
+            background: rgba(255, 255, 255, 0.03);
+            border-radius: 15px;
+        }
+        
+        .stat-item {
+            text-align: center;
+        }
+        
+        .stat-value {
+            font-size: 2rem;
+            font-weight: bold;
+            color: #00d4ff;
+            display: block;
+        }
+        
+        .stat-label {
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>EchoVerse</h1>
+            <p class="subtitle">Explore the infinite possibilities of your alternative realities</p>
+        </div>
+        
+        <div class="input-section">
+            <div class="input-group">
+                <input type="text" id="eventInput" placeholder="What if... (e.g., I chose a different career in 2020)">
+                <button onclick="createReality()">Generate Echo</button>
+            </div>
+        </div>
+        
+        <div class="visualization" id="visualization">
+            <div class="reality-details" id="details">
+                <h3>Reality Details</h3>
+                <p id="detailText">Click on a node to explore this timeline</p>
+            </div>
+        </div>
+        
+        <div class="stats">
+            <div class="stat-item">
+                <span class="stat-value" id="realitiesCount">0</span>
+                <span class="stat-label">Realities Explored</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value" id="decisionsCount">0</span>
+                <span class="stat-label">Decision Points</span>
+            </div>
+            <div class="stat-item">
+                <span class="stat-value" id="outcomeScore">0</span>
+                <span class="stat-label">Outcome Diversity</span>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        class EchoVerse {
+            constructor() {
+                this.data = { name: "Your Life", children: [], description: "The starting point of all possibilities" };
+                this.svg = null;
+                this.width = 1160;
+                this.height = 560;
+                this.realitiesCount = 0;
+                this.decisionsCount = 0;
+                
+                this.outcomes = [
+                    "led to unexpected success", "created new challenges", "opened different doors",
+                    "brought unique experiences", "changed your perspective", "influenced relationships",
+                    "sparked creativity", "revealed hidden talents", "created ripple effects",
+                    "transformed daily routine", "shifted priorities", "unlocked potential"
+                ];
+                
+                this.initVisualization();
+                this.createParticles();
+            }
+            
+            initVisualization() {
+                const container = d3.select("#visualization");
+                
+                this.svg = container.append("svg")
+                    .attr("width", this.width)
+                    .attr("height", this.height);
+                
+                this.g = this.svg.append("g")
+                    .attr("transform", "translate(80,80)");
+                
+                this.tree = d3.tree().size([this.width - 160, this.height - 160]);
+                this.update();
+            }
+            
+            createParticles() {
+                for (let i = 0; i < 20; i++) {
+                    setTimeout(() => {
+                        const particle = document.createElement('div');
+                        particle.className = 'particle';
+                        particle.style.left = Math.random() * window.innerWidth + 'px';
+                        particle.style.animationDelay = Math.random() * 6 + 's';
+                        particle.style.animationDuration = (4 + Math.random() * 4) + 's';
+                        document.body.appendChild(particle);
+                        
+                        setTimeout(() => particle.remove(), 10000);
+                    }, i * 200);
+                }
+                
+                setTimeout(() => this.createParticles(), 8000);
+            }
+            
+            addReality(event) {
+                if (!event.trim()) return;
+                
+                const outcomes = this.generateOutcomes(event);
+                const newReality = {
+                    name: event,
+                    description: `In this reality, ${event.toLowerCase()} ${this.outcomes[Math.floor(Math.random() * this.outcomes.length)]}`,
+                    children: outcomes,
+                    probability: Math.random() * 0.8 + 0.2
+                };
+                
+                this.data.children.push(newReality);
+                this.realitiesCount++;
+                this.decisionsCount += outcomes.length;
+                
+                this.updateStats();
+                this.update();
+                
+                document.getElementById('eventInput').value = '';
+            }
+            
+            generateOutcomes(event) {
+                const count = Math.floor(Math.random() * 3) + 2;
+                const outcomes = [];
+                
+                for (let i = 0; i < count; i++) {
+                    outcomes.push({
+                        name: `Outcome ${i + 1}`,
+                        description: `This path ${this.outcomes[Math.floor(Math.random() * this.outcomes.length)]}, leading to ${this.generateConsequence()}`,
+                        children: [],
+                        probability: Math.random() * 0.9 + 0.1,
+                        impact: Math.floor(Math.random() * 10) + 1
+                    });
+                }
+                
+                return outcomes;
+            }
+            
+            generateConsequence() {
+                const consequences = [
+                    "a completely different career path",
+                    "meeting someone who changed everything",
+                    "discovering a hidden passion",
+                    "moving to a new city",
+                    "starting an unexpected project",
+                    "learning a valuable lesson",
+                    "building stronger relationships",
+                    "overcoming a major fear"
+                ];
+                return consequences[Math.floor(Math.random() * consequences.length)];
+            }
+            
+            update() {
+                const root = d3.hierarchy(this.data);
+                const treeData = this.tree(root);
+                
+                // Links
+                const link = this.g.selectAll('.link')
+                    .data(treeData.links());
+                
+                link.enter().append('path')
+                    .attr('class', 'link')
+                    .merge(link)
+                    .transition()
+                    .duration(750)
+                    .attr('d', d3.linkHorizontal()
+                        .x(d => d.y)
+                        .y(d => d.x));
+                
+                link.exit().remove();
+                
+                const node = this.g.selectAll('.node')
+                    .data(treeData.descendants());
+                
+                const nodeEnter = node.enter().append('g')
+                    .attr('class', 'node')
+                    .on('click', (event, d) => this.showDetails(d))
+                    .on('mouseover', function(event, d) {
+                        d3.select(this).select('circle')
+                            .transition()
+                            .duration(200)
+                            .attr('r', 8);
+                    })
+                    .on('mouseout', function(event, d) {
+                        d3.select(this).select('circle')
+                            .transition()
+                            .duration(200)
+                            .attr('r', 6);
+                    });
+                
+                nodeEnter.append('circle')
+                    .attr('r', 0)
+                    .transition()
+                    .duration(750)
+                    .attr('r', 6);
+                
+                nodeEnter.append('text')
+                    .attr('dy', '.35em')
+                    .attr('x', d => d.children ? -13 : 13)
+                    .style('text-anchor', d => d.children ? 'end' : 'start')
+                    .text(d => d.data.name.length > 20 ? d.data.name.substring(0, 20) + '...' : d.data.name)
+                    .style('opacity', 0)
+                    .transition()
+                    .duration(750)
+                    .style('opacity', 1);
+                
+                const nodeUpdate = nodeEnter.merge(node);
+                
+                nodeUpdate.transition()
+                    .duration(750)
+                    .attr('transform', d => `translate(${d.y},${d.x})`);
+                
+                node.exit().remove();
+            }
+            
+            showDetails(d) {
+                const details = document.getElementById('details');
+                const detailText = document.getElementById('detailText');
+                
+                detailText.innerHTML = `
+                    <strong>${d.data.name}</strong><br><br>
+                    ${d.data.description}<br><br>
+                    ${d.data.probability ? `<em>Probability: ${(d.data.probability * 100).toFixed(1)}%</em><br>` : ''}
+                    ${d.data.impact ? `<em>Life Impact: ${d.data.impact}/10</em>` : ''}
+                `;
+                
+                details.classList.add('show');
+                
+                setTimeout(() => {
+                    details.classList.remove('show');
+                }, 5000);
+            }
+            
+            updateStats() {
+                document.getElementById('realitiesCount').textContent = this.realitiesCount;
+                document.getElementById('decisionsCount').textContent = this.decisionsCount;
+                document.getElementById('outcomeScore').textContent = Math.floor(this.realitiesCount * 1.7 + this.decisionsCount * 0.8);
+            }
+        }
+        
+        const echoVerse = new EchoVerse();
+        
+        function createReality() {
+            const input = document.getElementById('eventInput');
+            echoVerse.addReality(input.value);
+        }
+        
+        document.getElementById('eventInput').addEventListener('keypress', function(e) {
+            if (e.key === 'Enter') {
+                createReality();
+            }
+        });
+        
+        setTimeout(() => {
+            echoVerse.addReality("I moved to Japan in 2019");
+        }, 1000);
+        
+        setTimeout(() => {
+            echoVerse.addReality("I started learning programming at 16");
+        }, 2000);
+    </script>
+</body>
+</html>
