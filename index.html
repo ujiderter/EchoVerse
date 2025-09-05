@@ -338,25 +338,83 @@
                 setTimeout(() => this.createParticles(), 8000);
             }
             
-            addReality(event) {
-                if (!event.trim()) return;
+            async addReality(event) {
+                if (!event.trim() || this.isLoading) return;
                 
+                this.setLoading(true);
+                document.getElementById('eventInput').disabled = true;
+                
+                try {
+                    const response = await fetch(`${this.apiUrl}/realities`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                        },
+                        body: JSON.stringify({
+                            event: event,
+                            userSession: this.userSession
+                        })
+                    });
+                    
+                    if (response.ok) {
+                        const apiReality = await response.json();
+                        this.addRealityToTree(apiReality);
+                    } else {
+                        this.addLocalReality(event);
+                    }
+                } catch (error) {
+                    console.log('API unavailable, using local generation:', error.message);
+                    this.addLocalReality(event);
+                }
+                
+                this.setLoading(false);
+                document.getElementById('eventInput').disabled = false;
+                document.getElementById('eventInput').value = '';
+            }
+            
+            addLocalReality(event) {
                 const outcomes = this.generateOutcomes(event);
                 const newReality = {
                     name: event,
+                    title: event,
                     description: `In this reality, ${event.toLowerCase()} ${this.outcomes[Math.floor(Math.random() * this.outcomes.length)]}`,
                     children: outcomes,
-                    probability: Math.random() * 0.8 + 0.2
+                    outcomes: outcomes,
+                    probability: Math.random() * 0.8 + 0.2,
+                    impact: Math.floor(Math.random() * 10) + 1
+                };
+                
+                this.addRealityToTree(newReality);
+            }
+            
+            addRealityToTree(reality) {
+                const newReality = {
+                    name: reality.title || reality.name,
+                    description: reality.description,
+                    children: reality.outcomes || reality.children || [],
+                    probability: reality.probability || reality.probability_score,
+                    impact: reality.impact || reality.impact_score,
+                    id: reality.id
                 };
                 
                 this.data.children.push(newReality);
                 this.realitiesCount++;
-                this.decisionsCount += outcomes.length;
+                this.decisionsCount += newReality.children.length;
                 
                 this.updateStats();
                 this.update();
-                
-                document.getElementById('eventInput').value = '';
+            }
+            
+            setLoading(loading) {
+                this.isLoading = loading;
+                const button = document.querySelector('button');
+                if (loading) {
+                    button.innerHTML = '🔮 Generating...';
+                    button.style.opacity = '0.7';
+                } else {
+                    button.innerHTML = 'Generate Echo';
+                    button.style.opacity = '1';
+                }
             }
             
             generateOutcomes(event) {
@@ -394,7 +452,6 @@
                 const root = d3.hierarchy(this.data);
                 const treeData = this.tree(root);
                 
-                // Links
                 const link = this.g.selectAll('.link')
                     .data(treeData.links());
                 
