@@ -1,0 +1,94 @@
+version: '3.8'
+
+services:
+  echoverse-api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: echoverse-backend
+    restart: unless-stopped
+    ports:
+      - "3001:3001"
+    environment:
+      - NODE_ENV=production
+      - PORT=3001
+      - DATABASE_PATH=/app/data/echoverse.db
+      - ENABLE_AI_GENERATION=false
+      - ENABLE_REALITY_SHARING=true
+      - ENABLE_ANALYTICS=true
+      - LOG_LEVEL=info
+      - RATE_LIMIT_MAX_REQUESTS=100
+      - CORS_ORIGIN=http://localhost:3000,https://your-domain.com
+    volumes:
+      - echoverse_data:/app/data
+      - ./backups:/app/backups:ro
+    networks:
+      - echoverse-network
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:3001/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+      start_period: 40s
+
+  echoverse-frontend:
+    image: nginx:alpine
+    container_name: echoverse-frontend
+    restart: unless-stopped
+    ports:
+      - "8080:80"
+    volumes:
+      - ./public:/usr/share/nginx/html:ro
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - echoverse-network
+    depends_on:
+      echoverse-api:
+        condition: service_healthy
+
+  # Optional: Redis for caching and session management
+  redis:
+    image: redis:7-alpine
+    container_name: echoverse-redis
+    restart: unless-stopped
+    command: redis-server --appendonly yes --maxmemory 256mb --maxmemory-policy allkeys-lru
+    volumes:
+      - redis_data:/data
+    networks:
+      - echoverse-network
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 30s
+      timeout: 10s
+      retries: 3
+
+  nginx-proxy:
+    image: nginx:alpine
+    container_name: echoverse-proxy
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./nginx-proxy.conf:/etc/nginx/nginx.conf:ro
+      - ./ssl:/etc/nginx/ssl:ro
+    networks:
+      - echoverse-network
+    depends_on:
+      - echoverse-api
+      - echoverse-frontend
+    profiles:
+      - production
+
+networks:
+  echoverse-network:
+    driver: bridge
+    name: echoverse
+
+volumes:
+  echoverse_data:
+    driver: local
+    name: echoverse_database
+  redis_data:
+    driver: local
+    name: echoverse_redis
